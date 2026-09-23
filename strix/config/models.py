@@ -36,7 +36,7 @@ from openai.types.responses import (
 from openai.types.responses.response_usage import ResponseUsage
 from openai.types.shared import Reasoning
 
-from strix.config import codex
+from strix.config import claude_oauth, codex
 from strix.config.loader import load_settings
 from strix.config.tool_call_ids import TurnCallIdRewriter, dedupe_input
 from strix.config.tool_call_limits import TurnToolCallLimiter
@@ -521,6 +521,7 @@ class StrixProvider(MultiProvider):
     def get_model(self, model_name: str | None) -> Model:
         llm = load_settings().llm
         slug = codex.subscription_model(model_name)
+        claude_slug = claude_oauth.subscription_model(model_name)
         idle_timeout = float(llm.stream_idle_timeout)
         if slug:
             # The ChatGPT subscription backend is always streamed; it has no
@@ -536,6 +537,12 @@ class StrixProvider(MultiProvider):
                 provider="openai-codex",
                 base_url=None,
             )
+        elif claude_slug:
+            # Claude subscription backend via Anthropic OAuth.
+            # TODO: Implement _ClaudeResponsesModel when Anthropic SDK integration complete.
+            # For now, route through LiteLLM or raise NotImplementedError.
+            logger.warning("Claude OAuth routing not yet implemented; falling back to default provider")
+            model = super().get_model(model_name)
         else:
             model = super().get_model(model_name)
             resolved_name = model_name or llm.model or "unknown"
